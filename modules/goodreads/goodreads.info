@@ -1,5 +1,0 @@
-name = "Goodreads Bookshelf"
-description = "Displays items from a Goodreads BookShelf"
-core = 6.x
-php=5.3
-package = Other

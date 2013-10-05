@@ -1,0 +1,5 @@
+name = "Virtual Bookshelf"
+description = "Display virtual bookshelf from Goodreads service"
+core = 6.x
+php=5.3
+package = Other
