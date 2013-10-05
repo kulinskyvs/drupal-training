@@ -1,25 +1,144 @@
 <?php
+
 // $Id$
 /**
-* @file
-* Module for fetching data from Goodreads.com.
-* This module provides block content retrieved from a
-* Goodreads.com bookshelf.
-* @see http://www.goodreads.com
-*/
+ * @file
+ * Module for fetching data from Goodreads.com.
+ * This module provides block content retrieved from a
+ * Goodreads.com bookshelf.
+ * @see http://www.goodreads.com
+ */
+
+//TODO: make this url configurable at module level
+define('BOOKSHELF_DEFAULT_URL', 'https://www.goodreads.com/review/list_rss/398385?shelf=history-of-philosophy');
+define('NOCOVER_IMG' , 'http://www.goodreads.com/images/nocover-60x80.jpg');
+define('NOURL_LINK' , 'http://www.goodreads.com');
+define('DEFAULT_BOOKS_COUNT', 3);
 
 /**
- * Implementation of hook_block()
+ * Implementation of hook_block().
+ *
+ * @param $op What kind of information to retrieve about the block. Possible values: list, configure, save, view.
+ * @param $delta Which block to return.
+ * @param $edit Data from a configuration form, if submitted.
  */
 function goodreads_block($op = 'list', $delta = 0, $edit = array()) {
+  
+
   switch ($op) {
     case 'list':
-      $blocks[0]['info'] = t('Goodreads Bookshelf');
-      return $blocks;
+      return array('info' => t('Goodreads Bookshelf'));
+
     case 'view':
       $blocks['subject'] = t('On the Bookshelf');
-      $blocks['content'] = t('Temporary content');
+      $blocks['content'] = 
+      _goodreads_fetch_bookshelf(BOOKSHELF_DEFAULT_URL, DEFAULT_BOOKS_COUNT);
+
       return $blocks;
   }
+}
+
+/**
+ * Retrive information from Goodreas bookshelf via XML API.
+ * 
+ * This makes an HTTP connection to the given URL, and
+ * retrieves XML data, which it then attempts to format
+ * for display.
+ * 
+ * @param $url target bookshelf url
+ * @param items_limit max number of items to fetch from the bookshelf
+ * 
+ * @return string containing the presentation of the bookshelf
+ */
+function _goodreads_fetch_bookshelf($url, $items_limit) {
+  $result = drupal_http_request($url);
+
+  if (200 == $result->code) {
+    //we've got the xml document - try to parse it
+
+    try {
+      $xmlDoc = _parse_xml_string($result->data);
+      $content = _goodreads_render_booksheld($xmlDoc, $items_limit, NOURL_LINK, NOCOVER_IMG);
+    } catch (Exception $e) {
+      watchdog('goodreads', "Error parsing xml document from goodreads service using the %url:%error", 
+          array("url" => $url, "error" => $e->getMessage()), WATCHDOG_ERROR);
+      $content = t("Getting goodreads bookshelf resulted in error");
+    }
+  }
+  else {
+    $msg = "No content found from the %url";
+    watchdog('goodreads', $msg, array("url" => $url), WATCHDOG_WARNING);
+    $content = t('Unable to load bookshelf from default url. Contact you administrator.');
+  }
+  
+  return $content;
+}
+
+/**
+ * The function renders the content of bookshelft content from the given xml
+ * document with data using the given number of items
+ * 
+ * @param SimpleXMLElement $xml document root element
+ * @param type $items_limit  maximum number of items to be displayed on the shell
+ * @param $nourl_link url to be used for books with missed url
+ * @param $nocover_link image url to be used for books without cover image
+ */
+function _goodreads_render_booksheld(SimpleXMLElement $xml, $items_limit, $nourl_link, $nocover_link) {
+  $items = $xml->channel->item;
+  $count_items = count($items);
+  $length = ( $count_items > $items_limit ) ? $items_limit : $count_items;
+  $template = '<div class="goodreads-item"><img src="%s"/><br/>%s<br/>by %s</div>';
+  $content = "";
+  $itemIndex = 0;
+  
+  foreach ($items as $item) {
+    $itemIndex++;
+    if ($itemIndex > $length) break;
+    
+    $author = check_plain($item->author_name);
+    $title = strip_tags($item->title);
+    $link = check_url(trim($item->link));
+    $img = check_url(trim($item->book_image_url));
+    if (empty($author)) $author = "";
+    if (empty($title)) $title = "";
+    if (empty($link)) $link = $nourl_link;
+    if (empty($img)) $img = $nocover_link;
+    
+    $content .= sprintf($template, $img, l($title, $link),$author);
+  }
+  
+  $content .= '<br/><div class="goodreads-more">'. 
+      l('Goodreads.com', 'http://www.goodreads.com').'</div>';
+  return $content;
+}
+
+/**
+ * Parse the given xml string and returns the SimpleXMLElement object if ok,
+ * else throws exception
+ * @param String $xmlData 
+ */
+function _parse_xml_string($xmlData) {
+  libxml_use_internal_errors(true);
+
+  try {
+    $xmlDoc = simplexml_load_string($xmlData);
+  } catch (Exception $ex) {
+    throw new Exception($ex->getMessage());
+  }
+
+  //check whether we parsed the string 
+  if (false === $xmlDoc) {
+    $exMessage = "";
+    //gather produces xml parsing errors
+    foreach (libxml_get_errors() as $error) {
+      $exMessage .= $error->message . "\t";
+    }
+    libxml_clear_errors();
+
+    //generate new exception
+    throw new Exception($exMessage);
+  }
+
+  return $xmlDoc;
 }
 
