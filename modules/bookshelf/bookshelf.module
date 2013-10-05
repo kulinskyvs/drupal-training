@@ -9,6 +9,7 @@
  * @see http://www.goodreads.com
  */
 
+define('MODULE_NAME', 'bookshelf');
 //TODO: make this url configurable at module level
 define('BOOKSHELF_DEFAULT_URL', 'https://www.goodreads.com/review/list_rss/398385?shelf=history-of-philosophy');
 define('NOCOVER_IMG' , 'http://www.goodreads.com/images/nocover-60x80.jpg');
@@ -35,6 +36,26 @@ function bookshelf_block($op = 'list', $delta = 0, $edit = array()) {
 
       return $blocks;
   }
+}
+
+/**
+ * Implementation of hook_help().
+ *
+ * @param $path A Drupal menu router path the help is being requested.
+ * @param $arg An array that corresponds to the return of the arg() function.
+ * @return A localized string containing the help text.
+ */
+function bookshelf_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case "admin/help#".MODULE_NAME:
+      $text = 'The Bookshelf module uses !goodreads_url to build virtual bookshelf';
+      $output = "<p>".
+          t($text, array("!goodreads_url" => l("Goodreads service", NOURL_LINK))).
+          "</p>";
+      break;
+  }
+  return $output;
 }
 
 /**
