@@ -1,0 +1,8 @@
+name = "Book theme"
+description = "Simple book theme created just to test Drupal theming abilities"
+core = 6.x
+version = 1.0
+base theme=bluemarine
+
+stylesheets[all][] = style.css
+stylesheets[all][] = booktheme.css

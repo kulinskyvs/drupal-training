@@ -1,0 +1,39 @@
+/*
+** Styles to override the styles.css in
+** bluemarine.css
+** $Id$
+*/
+/*
+* Plain white right nav.
+*/
+#sidebar-right {
+    border-left: 1px solid #ea940c;
+    background-color: white;
+    horizontal-align:right;
+}
+/*
+* Add background image.
+*/
+#sidebar-left {
+    background: url(leMonde_sidebar.png) no-repeat top left;
+    border-right: 1px solid #ea940c;
+}
+/*
+* Set the background for the mission.
+*/
+#mission {
+    background-color: #ea940c;
+    padding: 5px 15px 5px 15px;
+    text-align: center;
+}
+
+ul.breadcrumb-items li {
+    list-style-image: url(orange_dot.gif);
+    float: left;
+    margin-right: 1em;
+    margin-left: 1em;
+}
+ul.breadcrumb-items li.first {
+    margin-left: 0px;
+    list-style: none;
+}
