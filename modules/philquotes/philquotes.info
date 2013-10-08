@@ -1,0 +1,7 @@
+name = "Philosopher quotes"
+description = "Display a block with randomly selected quote using new content type Quote"
+core = 6.x
+package = Other
+php = 5.3
+
+version = 1.0

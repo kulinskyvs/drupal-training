@@ -37,3 +37,13 @@ ul.breadcrumb-items li.first {
     margin-left: 0px;
     list-style: none;
 }
+
+#philquotes-text:first-letter {
+    font-size: 18pt;
+    font-weight: bold;
+}
+#philquotes-origin {
+    font-style: oblique;
+    text-align: right;
+    margin-right: 5px;
+}

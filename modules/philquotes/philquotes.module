@@ -1,0 +1,123 @@
+<?php
+
+/////////////////////////////////////   HOOKS  /////////////////////////////////
+/**
+ * Implementation of hook_block().
+ *
+ * @param $op What kind of information to retrieve about the block. Possible values: list, configure, save, view.
+ * @param $delta Which block to return.
+ * @param $edit Data from a configuration form, if submitted.
+ */
+function philquotes_block($op = 'list', $delta = 0, $edit = array()) {
+  switch ($op) {
+    case 'list':
+      $blocks[0]['info'] = t('Philosopher quotes');
+      return $blocks;
+      break;
+
+    case 'view':
+      $quote = _philqoutes_get_quote();
+      if (!empty($quote)) {
+        //content is obtained through invoking theme mechanism since the philquotes_quote
+        //can be overriden at themen level > we can just invoke philquotes_quote function,
+        // we must use the theme function!!!
+        $content = theme('philquotes_quote', check_plain($quote->body), check_plain($quote->title));
+        
+        $blocks['subject'] = t('Philosopher quotes');
+        $blocks['content'] = $content;
+        //$blocks['content'] = 'Content';
+        return $blocks;
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function philquotes_theme() {
+  return array(
+    //registering default theming function for quote
+    'philquotes_quote' => array(
+      'arguments' => array('text' => NULL, 'origin' => NULL)
+    )
+  );
+}
+
+/**
+ * Implementaiton of hook_menu()
+ */
+function philquotes_menu() {
+  $items['philquotes.json'] = array(
+    'title' => 'Philquotes AJAX Gateway',
+    'page callback' => 'philquotes_item',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+/**
+ * Callback to handle requests for philquotes content.
+ * @return
+ * JSON data.
+ */
+function philquotes_item() {
+  $quote = _philqoutes_get_quote();
+  drupal_set_header('Content-Type: text/plain; charset: utf-8');
+  printf(
+      '{ "quote": { "origin": "%s", "text": "%s"}}', $quote->title, $quote->body
+  );
+}
+
+
+
+/**
+ * Default theming function for quote.
+ * One can be ovverriden an theme level through the given function or through the 
+ * philquotes_quote.tpl.php template file (it's up to developer).
+ * 
+ * @param $text the text of the quote
+ * @param $origin author of the quoter
+ */
+function theme_philquotes_quote($text = NULL, $origin = NULL) {
+  //1. including the path to css file with default style for quote
+  $module_path = drupal_get_path('module', 'philquotes');
+  drupal_add_css($module_path . '/philquotes.css');
+  
+  //2. include javascript file
+  drupal_add_js($module_path .'/philquotes.js');
+  
+  //3. build ajax url for quotes and set it to Drupal glocal js settings
+  $opts = array('absolute' => TRUE);
+  $json_url = url('philquotes.json', $opts);
+  drupal_add_js(
+      array('philquotes' =>
+              array("json_url" => $json_url)
+            ), 
+      'setting');
+
+
+  //render content of the quote to be displayed
+  $output = '<div id="philquotes-text">' . t($text)
+      . '</div><div id="philquotes-origin">' . t($origin) . '</div>';
+  return $output;
+}
+
+
+/**
+ * Returns next random philosopher quote form the DB
+ * 
+ * @return extracted quote if any found, NULL - otherwise
+ */
+function _philqoutes_get_quote() {
+  $sql = "SELECT nid FROM {node} " .
+      "WHERE status=1 AND type='quote' ORDER BY RAND() LIMIT 1";
+  $res = db_query($sql);
+  $item = db_fetch_object($res);
+
+  return node_load($item->nid);
+}
+

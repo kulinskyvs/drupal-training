@@ -1,0 +1,12 @@
+#philquotes-text:first-letter {
+    font-size: 18pt;
+    font-weight: bold;
+}
+#philquotes-origin {
+    font-style: oblique;
+    text-align: right;
+    margin-right: 5px;
+}
+#next-quote-url{
+    cursor: pointer;
+}
