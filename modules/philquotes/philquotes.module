@@ -22,7 +22,7 @@ function philquotes_block($op = 'list', $delta = 0, $edit = array()) {
         //can be overriden at themen level > we can just invoke philquotes_quote function,
         // we must use the theme function!!!
         $content = theme('philquotes_quote', check_plain($quote->body), check_plain($quote->title));
-        
+
         $blocks['subject'] = t('Philosopher quotes');
         $blocks['content'] = $content;
         //$blocks['content'] = 'Content';
@@ -76,9 +76,9 @@ function philquotes_item() {
 
 /**
  * Default theming function for quote.
- * One can be ovverriden an theme level through the given function or through the 
+ * One can be ovverriden an theme level through the given function or through the
  * philquotes_quote.tpl.php template file (it's up to developer).
- * 
+ *
  * @param $text the text of the quote
  * @param $origin author of the quoter
  */
@@ -86,17 +86,17 @@ function theme_philquotes_quote($text = NULL, $origin = NULL) {
   //1. including the path to css file with default style for quote
   $module_path = drupal_get_path('module', 'philquotes');
   drupal_add_css($module_path . '/philquotes.css');
-  
+
   //2. include javascript file
   drupal_add_js($module_path .'/philquotes.js');
-  
+
   //3. build ajax url for quotes and set it to Drupal glocal js settings
   $opts = array('absolute' => TRUE);
   $json_url = url('philquotes.json', $opts);
   drupal_add_js(
       array('philquotes' =>
               array("json_url" => $json_url)
-            ), 
+            ),
       'setting');
 
 
@@ -109,7 +109,7 @@ function theme_philquotes_quote($text = NULL, $origin = NULL) {
 
 /**
  * Returns next random philosopher quote form the DB
- * 
+ *
  * @return extracted quote if any found, NULL - otherwise
  */
 function _philqoutes_get_quote() {

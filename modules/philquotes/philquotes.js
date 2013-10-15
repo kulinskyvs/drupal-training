@@ -18,11 +18,11 @@ if (Drupal.jsEnabled) {
         //use jQuery axjax call function
         $.get(
           //use json url specified in setting parameters
-          Drupal.settings.philquotes.json_url, 
+          Drupal.settings.philquotes.json_url,
           function(data) {
-            //parse JSON   
+            //parse JSON
             myQuote = Drupal.parseJson(data);
-            
+
             if(!myQuote.status || myQuote.status == 0) {
                 //if OK - repaint quote divs
                 $("#philquotes-origin").text(myQuote.quote.origin);

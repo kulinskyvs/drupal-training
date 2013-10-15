@@ -1,0 +1,267 @@
+<?php
+
+define('EMAILUSERS_MODULE_NAME', 'emailusers');
+define('COMPOSE_URL', 'admin/'.EMAILUSERS_MODULE_NAME.'/compose');
+define('EMAIL_TO','to');
+define('EMAIL_MESSAGE','message');
+define('EMAIL_SUBJECT','subject');
+define('EMAIL_BODY','body');
+define('EMAIL_DETAILS','details');
+define('EMAIL_CC_ME','cc_me');
+
+/**
+ * Implementation of hook_help().
+ *
+ * @param $path A Drupal menu router path the help is being requested.
+ * @param $arg An array that corresponds to the return of the arg() function.
+ * @return A localized string containing the help text.
+ */
+function emailusers_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case "admin/help#emailusers":
+      $output = 'This module provides an ability for administrator to send e-mail
+        to any registered site user';
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_menu().
+ *
+ * @return An array of menu items.
+ */
+function emailusers_menu() {
+  //$items['admin/emailusers/compose/%'] = array(
+  $items[COMPOSE_URL.'/%'] = array(
+    'title' => 'Compose a Message',
+    'page callback' => 'emailusers_compose_email',
+    'page arguments' => array(3),
+    'access arguments' => array('administer users'),
+    'type' => MENU_CALLBACK
+  );
+
+  return $items;
+}
+
+
+/**
+ * Compose email menu item call back function - builds form uwing FAPI
+ * 
+ * @param $user_id identifier of the user for whom email mesage must be composed
+ */
+function emailusers_compose_email($user_id) {
+  $user_uid = intval($user_id);
+  if (0 === $user_uid) 
+    return t('User id must be an integer number');
+  
+  $account = user_load($user_uid);
+  if (empty($account))
+    return t('User with ID='.$user_id.' is not found');
+  
+  //return var_dump($account);
+  $output = '<p>'.
+      t('Send a message to @email.', array('@email' => $account->mail)).
+      '</p>';
+  $output .= drupal_get_form('emailusers_compose_form', $account);
+  return $output;
+}
+
+/**
+ *Form constuctor for email cmposition form 
+ */
+function emailusers_compose_form($context, $account) {
+//  $form['to'] = array(
+//    '#type' => 'value', '#value' => $account);
+//  
+//  $form['message'] = array(
+//    '#type' => 'fieldset',
+//    '#title' => t('Compose a message'));
+//
+//  $form['message']['subject'] = array(
+//    '#type' => 'textfield',
+//    '#title' => t('Subject'),
+//    '#size' => 50,
+//    '#maxlength' => 255,
+//    '#description' => t('Message subject'),
+//    '#required' => true
+//  );
+//  
+//  $form['message']['body'] = array(
+//    '#type' => 'textarea',
+//    '#title' => t('Message'),
+//    '#cols' => 50,
+//    '#rows' => 5,
+//    '#description' => t('The body of the message'),
+//  );
+//  
+//  $form['details'] = array(
+//    '#type' => 'fieldset',
+//    '#title' => t('Details'),
+//    '#collapsible' => TRUE,
+//    '#collapsed' => FALSE
+//    );
+//  $form['details']['cc_me'] = array(
+//    '#type' => 'checkbox',
+//    '#title' => t('Send me acopy'),
+//    '#default_value' => 1,
+//    '#description' => t('If this checkbox is selected then the copy of the email will be sent to me')
+//  );  
+//  
+//  $form['submit'] = array(
+//    '#type' => 'submit',
+//    '#value' => t('Send')
+//  );
+//  return $form;
+    
+  return array(
+    EMAIL_TO => array(
+      '#type' => 'value', 
+      '#value' => $account),
+    EMAIL_MESSAGE => array(
+      '#type' => 'fieldset',
+      '#title' => t('Compose a message'),
+      EMAIL_SUBJECT => array(
+          '#type' => 'textfield',
+          '#title' => t('Subject'),
+          '#size' => 50,
+          '#maxlength' => 255,
+          '#description' => t('Message subject')
+      ),
+      EMAIL_BODY => array(
+          '#type' => 'textarea',
+          '#title' => t('Message'),
+          '#cols' => 50,
+          '#rows' => 5,
+          '#description' => t('The body of the message'),        
+      )
+    ),
+    EMAIL_DETAILS => array(
+      '#type' => 'fieldset',
+      '#title' => t('Details'),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+      EMAIL_CC_ME => array(
+          '#type' => 'checkbox',
+          '#title' => t('Send me a copy'),
+          '#default_value' => 1,
+          '#description' => t('If this checkbox is selected then the copy of the email will be sent to me')
+      )
+    ),
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => t('Send')
+    )
+  );
+}
+
+/**
+ * Callback validation function for the form 'emailusers_compose_form'
+ * 
+ * @param $form
+ * @param $form_state 
+ */
+function emailusers_compose_form_validate($form, &$form_state) {
+  $form_values = $form_state['values'];
+  if (empty($form_values[EMAIL_SUBJECT])) {
+    form_set_error('', t('Please enter the subject of the message'));
+  }
+}
+
+
+/**
+ * Callback submission function for the form 'emailusers_compose_form'
+ * 
+ * @param type $form
+ * @param type $form_state 
+ */
+function emailusers_compose_form_submit($form, &$form_state) {
+  $form_values = $form_state['values'];
+  $account = $form_values[EMAIL_TO];
+
+  drupal_mail( EMAILUSERS_MODULE_NAME,  'composemessage',
+    $account->mail,  user_preferred_language($account), $form_values,
+    variable_get('site_mail', null), 
+    true // Automatically send
+  );
+  
+  //$form_state['redirect'] = sprintf('user/%d', $account->uid);
+  drupal_set_message(t('The email was sent'));
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+/**
+ * Implementation of hook_mail().
+ *
+ * @param $key An identifier of the mail.
+ * @param $message An array to be filled in. Keys in this array include: id, to, subject, body, from, headers
+ * @param $params An arbitrary array of parameters set by the caller to drupal_mail.
+ */
+function emailusers_mail($key, &$message, $params) {
+  global $user; //currently logged in user
+  
+  if ('composemessage' === $key) {
+    $language = $params['language'];
+    $account = $params[EMAIL_TO];
+    
+    if ($params[EMAIL_CC_ME]) {
+      // Look up current user's email address:
+      //$my_account = user_current_load(null);
+      $message['headers']['bcc'] = $user->mail;
+    }
+    $message['to'] = $account->mail;
+    $message['subject'] = t('Drupal Message: ', array(), $language->language);
+    // If these were automatically-generated messages, they should be
+    // run through t(), but since text is user-entered, don't use
+    // t().
+    $message['subject'] .= $params[EMAIL_SUBJECT];
+    $message['body'] = $params[EMAIL_BODY];
+  }
+}
+
+/**
+ * Implementation of hook_mail_alter().
+ *
+ * @param $message A structured array containing the message to be altered. keys in this array include: id, to, subject, body, from, headers
+ */
+function emailusers_mail_alter(&$message) {
+  $append = "\n=======================\n".
+      "This message was sent from !site_name (!website). ".
+      "please contact !site_email.\n";
+  $args = array(
+  '!website' => url('', array('absolute' => true)),
+  '!site_email' => variable_get('site_mail', null),
+  '!site_name' => variable_get('site_name', 'Unknown'),
+  );
+  $message['body'] .= t($append, $args);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/**
+ * Implementation of hook_user().
+ *
+ * @param $op What kind of actions is being performed. Possible values: after_update, categories, delete, form, insert, load, login, logout, register, submit, update, validate, view
+ * @param &$edit The array of form values submitted by the user.
+ * @param &$account The user object on which the operation is being performed.
+ * @param $category The active category of user information being edited.
+ */
+function emailusers_user($op, &$edit, &$account, $category = NULL) {
+  if ('view' === $op && user_access('administer users')) {
+    // Create the outer "block"
+    $account->content['EmailUsers'] = array(
+    '#type' => 'user_profile_category',
+    '#attributes' => array('class' => 'user-member'),
+    '#weight' => 0,
+    '#title' => t('Contact user'),
+    );
+    // Create the content of the block
+    $account->content['EmailUsers']['EmailLink'] = array(
+    '#type' => 'user_profile_item',
+    '#title' => t('Send a message to this user from the site administrator.'),
+    '#value' => l( 'Email', COMPOSE_URL.'/'. $account->uid),
+    );    
+  }
+  
+}

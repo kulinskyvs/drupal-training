@@ -1,0 +1,7 @@
+name = "Email users"
+description = "Email users from administrator profile to any registered user"
+core = 6.x
+package = Other
+php = 5.3
+
+version = 1.0
