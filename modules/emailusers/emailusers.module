@@ -8,6 +8,8 @@ define('EMAIL_SUBJECT','subject');
 define('EMAIL_BODY','body');
 define('EMAIL_DETAILS','details');
 define('EMAIL_CC_ME','cc_me');
+define('OPERAION_SEND', 'Send');
+define('OPERAION_CANCEL', 'Cancel');
 
 /**
  * Implementation of hook_help().
@@ -151,7 +153,11 @@ function emailusers_compose_form($context, $account) {
     ),
     'submit' => array(
       '#type' => 'submit',
-      '#value' => t('Send')
+      '#value' => t(OPERAION_SEND)
+    ),
+    'cancel' => array(
+      '#type' => 'submit',
+      '#value' => t(OPERAION_CANCEL)
     )
   );
 }
@@ -163,8 +169,11 @@ function emailusers_compose_form($context, $account) {
  * @param $form_state 
  */
 function emailusers_compose_form_validate($form, &$form_state) {
+  $operation = $form['#post']['op'];
   $form_values = $form_state['values'];
-  if (empty($form_values[EMAIL_SUBJECT])) {
+  
+  //validate only when Send button is clicked
+  if (t(OPERAION_SEND) === $operation  &&  empty($form_values[EMAIL_SUBJECT])) {
     form_set_error('', t('Please enter the subject of the message'));
   }
 }
@@ -177,17 +186,27 @@ function emailusers_compose_form_validate($form, &$form_state) {
  * @param type $form_state 
  */
 function emailusers_compose_form_submit($form, &$form_state) {
+  //var_dump($form['#post']);
+  $operation = $form['#post']['op'];
   $form_values = $form_state['values'];
   $account = $form_values[EMAIL_TO];
+   
+  if (t(OPERAION_CANCEL) === $operation) {
+    //cancel button is pressed - redirect to user profile
+    $account = $form_values[EMAIL_TO];
+    $form_state['redirect'] = sprintf('user/%d', $account->uid);
+    
+  } else {
+    //Send button is pressed - send the message
+    drupal_mail( EMAILUSERS_MODULE_NAME,  'composemessage',
+      $account->mail,  user_preferred_language($account), $form_values,
+      variable_get('site_mail', null), 
+      true // Automatically send
+    );
 
-  drupal_mail( EMAILUSERS_MODULE_NAME,  'composemessage',
-    $account->mail,  user_preferred_language($account), $form_values,
-    variable_get('site_mail', null), 
-    true // Automatically send
-  );
-  
-  //$form_state['redirect'] = sprintf('user/%d', $account->uid);
-  drupal_set_message(t('The email was sent'));
+    //$form_state['redirect'] = sprintf('user/%d', $account->uid);
+    drupal_set_message(t('The email was sent'));
+  }
 }
 
 
