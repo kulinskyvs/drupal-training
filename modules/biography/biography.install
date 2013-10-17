@@ -1,0 +1,137 @@
+<?php
+/**
+* Install the biography module, including it's content (node)
+* type.
+* @file
+*/
+define('COLUMN_NID', 'nid');
+define('COLUMN_VID', 'vid');
+
+define('BIOGRAPHY', 'biography');
+define('PRESS_RELEASE', 'pressrelease');
+
+define('BIO_COLUMN_DATES', 'dates');
+define('BIO_COLUMN_DATES_MAX_LENGTH', 127);
+define('BIO_COLUMN_LIFE', 'life');
+define('BIO_COLUMN_WORKS', 'works');
+
+define('PR_COLUMN_DATELINE', 'dateline');
+define('PR_COLUMN_INTRO', 'intro');
+define('PR_COLUMN_CONTACT', 'contact');
+
+/**
+ * Implementation of hook_install().
+ */
+function biography_install() {
+  drupal_install_schema('biography');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function biography_uninstall() {
+  drupal_uninstall_schema('biography');
+}
+
+
+/**
+ * Implementation of hook_schema().
+ */
+function biography_schema() {
+  $schema = array();
+
+  //define structure for biography table
+  $schema[BIOGRAPHY] = array(
+    'description' => 'The table is intended to store data for custom content type "Biography"',
+    'fields' => array(
+      COLUMN_VID => array(
+        'description' => 'Stores version id of the node. Any time the node is updated new version if created.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      COLUMN_NID => array(
+        'description' => 'Identifier of the node, standard data is stored in {node} table.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      BIO_COLUMN_DATES => array(
+        'description' => 'Store the birth and death date of the person',
+        'type' => 'varchar',
+        'length' => BIO_COLUMN_DATES_MAX_LENGTH,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      BIO_COLUMN_LIFE => array(
+        'description' => 'The biography of the person',
+        'type' => 'text',
+        'not null' => FALSE
+      ),
+      BIO_COLUMN_WORKS => array(
+        'description' => 'The biography of the person',
+        'type' => 'text',
+        'not null' => FALSE
+      ),
+    ),
+    'indexes' => array(
+      COLUMN_NID => array(COLUMN_NID)
+    ),
+    'unique keys' => array(
+      COLUMN_NID.'_'.COLUMN_VID => array(COLUMN_NID, COLUMN_VID)
+    ),
+    'primary key' => array(COLUMN_VID), //version is primary key
+  );
+  
+  
+  //define structure for press_release
+  $schema[PRESS_RELEASE] = array(
+    'description' => 'The table is intended to additonal information for press release nodes',
+    'fields' => array(
+      COLUMN_VID => array(
+        'description' => 'Stores version id of the node. Any time the node is updated new version if created.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      COLUMN_NID => array(
+        'description' => 'Identifier of the node, standard data is stored in {node} table.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      PR_COLUMN_DATELINE => array(
+        'description' => 'The date of the press release',
+        'type' => 'varchar',
+        'length' => 127,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      PR_COLUMN_INTRO => array(
+        'description' => 'The introduction of the press release',
+        'type' => 'text',
+        'not null' => FALSE
+      ),
+      PR_COLUMN_CONTACT => array(
+        'description' => 'The contacts of the press release',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => true,
+        'default' => ''
+      ),
+    ),
+    'indexes' => array(
+      COLUMN_NID => array(COLUMN_NID)
+    ),
+    'unique keys' => array(
+      COLUMN_NID.'_'.COLUMN_VID => array(COLUMN_NID, COLUMN_VID)
+    ),
+    'primary key' => array(COLUMN_VID), //version is primary key
+  );
+
+  return $schema;
+}

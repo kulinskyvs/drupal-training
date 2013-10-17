@@ -1,0 +1,548 @@
+<?php
+
+/**
+ * Provides two content types: biography and press_release
+ * 
+ * @file 
+ */
+
+define('PERM_CREATE_BIO', 'Create biography nodes');
+define('PERM_UPDATE_BIO', 'Update biography nodes');
+define('PERM_DELETE_BIO', 'Delete biography nodes');
+
+define('PERM_CREATE_PR', 'Create press release nodes');
+define('PERM_UPDATE_PR', 'Update press release nodes');
+define('PERM_DELETE_PR', 'Delete press release nodes');
+
+
+/**
+ * Implementation of hook_help().
+ *
+ * @param $path A Drupal menu router path the help is being requested.
+ * @param $arg An array that corresponds to the return of the arg() function.
+ * @return A localized string containing the help text.
+ */
+function biography_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case "admin/help#biography":
+      $txt = 
+      '<p> A biography is a textual description of a person\'s life and works. '.
+      ' <ul>'.
+        ' <li> The summary should give a brief overview of the person explaining why the person is important.'.
+        ' <li> The \'dates\' area should  provide information on birth date and death date for the person'. 
+        '      This field is free-text, and might look like this: \'c. 500 BCE-450 BCE\''.
+        ' <li> \'Life\' should provide a biography of the person'.
+        ' <li> \'Works\' should contain a list of this person\'s works.'.
+      ' </ul>'.
+      '<p> A press release  is a written or recorded communication directed at members '.
+      ' of the news media for the purpose of announcing something ostensibly newsworthy. The structure of press release is the following '.
+      ' <ul>'.
+        ' <li> Headline — used to grab the attention of journalists and briefly summarize the news'.
+        ' <li> Dateline — contains the release date'. 
+        ' <li> Introduction — first paragraph in a press release, that generally gives basic answers to the questions of who, what, when, where and why.'.
+        ' <li> Body — further explanation, statistics, background, or other details relevant to the news.'.
+        ' <li> Media contact information — name, phone number, email address, mailing address'.
+      ' </ul>'           ;
+        $output = t($txt, array());
+      break;
+  }
+  return $output;
+}
+
+
+/**
+ * Implementation of hook_node_info().
+ * Registeres new node types: biography and press release
+ *
+ * @return An array of information on the biography's node types.
+ */
+function biography_node_info() {
+  return array(
+    'biography' => array(
+      'name' => t('Biography'),
+      'module' => 'biography',
+      'description' => t("A biography of a person"),
+      'has_title' => TRUE,
+      'title_label' => t('Biography of'),
+      'has_body' => TRUE,
+      'body_label' => t('Overview')
+    ),
+    //registerd press release node type
+    'pressrelease' => array(
+      'name' => t('Press release'),
+      'module' => 'biography',
+      'description' => t("A press release"),
+      'has_title' => TRUE,
+      'title_label' => t('Headline'),
+      'has_body' => TRUE,
+      'body_label' => t('Body')
+    )
+  );
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function biography_theme() {
+  return array(
+    'biography_info' => array(
+      'arguments' => array('dates' => NULL, 'life'=>NULL, 'works' => NULL),
+      'template' => 'biography_info'
+    ),
+    'pressrelease_info' => array(
+      'arguments' => array('body' => NULL, 'dateline' => NULL, 'intro'=>NULL, 'contact' => NULL),
+      'template' => 'pressrelease_info'
+    ),
+  );
+}
+
+
+/**
+ * Implementation of hook_perm().
+ *
+ * @return array An array of valid permissions for the biography module
+ */
+function biography_perm() {
+  return array(
+    PERM_CREATE_BIO, PERM_UPDATE_BIO, PERM_DELETE_BIO,
+    PERM_CREATE_PR, PERM_UPDATE_PR, PERM_DELETE_PR);
+}
+
+/**
+ * Implementation of hook_access().
+ *
+ * @param $op Operation to be performed.
+ * @param $node The node on which the operation is to be performed, or, if it does not yet exist, the type of node to be created. 
+ * @param $account A user object representing the user for whom the operation is to be performed.
+ * @return TRUE if the operation is to be allowed; FALSE if the operation is to be denied; NULL to not override the settings in the node_access table, or access control modules.
+ */
+function biography_access($op, $node, $account) {
+  $nodeTypeController = NodeTypeControllerFactory::getNodeTypeController($node);
+  return $nodeTypeController ->  access($op, $node, $account);
+}
+
+/**
+ * Implementation of hook_form().
+ * 
+ * @param type $node
+ * @param type $form_state
+ * @return type 
+ */
+function biography_form(&$node, $form_state) {
+  $nodeTypeController = NodeTypeControllerFactory::getNodeTypeController($node);
+  return $nodeTypeController -> getForm($node, $form_state);
+}
+
+
+/**
+ * Implementation of hook_view().
+ *
+ * @param $node The node to be displayed.
+ * @param $teaser Whether we are to generate a "teaser" or summary of the node, rather than display the whole thing.
+ * @param $page Whether the node is being displayed as a standalone page.
+ */
+function biography_view($node, $teaser = FALSE, $page = FALSE) {
+  $nodeTypeController = NodeTypeControllerFactory::getNodeTypeController($node); 
+  return $nodeTypeController -> getView($node, $teaser, $page);
+}
+
+/**
+ * Implementation of hook_load().
+ *
+ * @param $node The node being loaded.
+ */
+function biography_load($node) {
+  $nodeTypeController = NodeTypeControllerFactory::getNodeTypeController($node);
+  return $nodeTypeController -> load($node);
+}
+
+
+/**
+ * Implementation of hook_insert().
+ *
+ * @param $node The node being inserted.
+ */
+function biography_insert($node) {
+  $nodeTypeController = NodeTypeControllerFactory::getNodeTypeController($node); 
+  $nodeTypeController -> insert($node);
+}
+
+
+/**
+ * Implementation of hook_update().
+ *
+ * @param $node The node being updated.
+ */
+function biography_update($node) {
+  if ($node->revision) {
+    //insert new revision of the node
+    biography_insert($node);
+  } else {
+    $nodeTypeController = NodeTypeControllerFactory::getNodeTypeController($node);
+    $nodeTypeController -> update($node);
+  }
+}
+
+/**
+ * Implementation of hook_delete().
+ *
+ * @param $node The node being deleted.
+ */
+function biography_delete(&$node) {
+  $nodeTypeController = NodeTypeControllerFactory::getNodeTypeController($node); 
+  $nodeTypeController -> delete($node);
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+ * @param &$node The node the action is being performed on.
+ * @param $op What kind of action is being performed. Possible values: alter, delete, delete revision, insert, load,
+ *   prepare, prepare translation, print, rss item, search result, presave, update, update index, validate, view
+ * @param $a3
+ * @param $a4
+ */
+function biography_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  switch ($op) {
+    case 'delete revision':
+        $nodeTypeController = NodeTypeControllerFactory::getNodeTypeController($node);
+        $nodeTypeController  -> deleteRevision($node->vid);
+      break;
+  }
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Defines an interface for node type controller.
+ * Node type controller is in charge of handling all the hooks required to create new node type 
+ */
+interface NodeTypeController {
+  
+  /**
+   * Check the access of the given operation to the given node 
+   */
+  public function access($op, $node, $account);
+  
+  
+  public function getForm(&$node, $form_state);
+  
+  public function getView($node, $teaser = FALSE, $page = FALSE);
+  
+  /**
+   * Load additonal data for the given node from the DB 
+   */
+  public function load($node);
+  
+  /**
+   * Store the given node in the DB
+   */
+  public function insert($node);
+  
+  /**
+   * Updates the given node in the DB
+   */
+  public function update($node);
+  
+  /**
+   * Deletes the given node from the DB 
+   */
+  public function delete(&$node);
+  
+/**
+ * Deletes the given revision from the DB
+ */
+ function deleteRevision($vid);
+}
+
+
+
+class BiographyNodeTypeController implements NodeTypeController {
+  
+  public function access($op, $node, $account) {
+    switch ($op) {
+      case "create" :
+        return user_access(PERM_CREATE_BIO, $account);
+      case "update" :
+        return user_access(PERM_UPDATE_BIO, $account);
+      case "delete" :
+        return user_access(PERM_DELETE_BIO, $account);
+    }      
+  }
+
+  public function delete(&$node) {
+    db_query("DELETE FROM {biography} WHERE nid = %d", $node->nid);
+  }
+
+  public function deleteRevision($vid) {
+    db_query("DELETE FROM {biography} WHERE vid = %d", $vid);
+  }
+
+  public function getForm(&$node, $form_state) {
+    //get the type of the node (it necessary, since administrator can override it)
+    $type = node_get_types('type', $node);
+
+    if ($type -> has_title) {
+      $form['title'] = array(
+          '#type' => 'textfield',
+          '#title' => check_plain($type->title_label),
+          '#required' => TRUE,
+          '#default_value' => $node->title,
+          '#weight' => 0
+        );
+    }
+    if ($type->has_body) {
+      $form['body_field'] = node_body_field(
+          $node,
+          $type->body_label,
+          $type->min_word_count
+          );
+    }
+    //custom fields
+    $form['dates'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Dates'),
+      '#required' => TRUE,
+      '#size' => 50,
+      '#maxlength' => 127,
+      '#description' => t('Birth and death dates'),
+      '#default_value' => isset($node->dates) ? $node->dates : ''
+    );
+    $form['life'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Life'),
+      '#cols' => 50,
+      '#rows' => 5,
+      '#description' => t('A description of person\'s life'),
+      '#default_value' => isset($node->life) ? $node->life : ''
+    );
+    $form['works'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Works'),
+      '#cols' => 50,
+      '#rows' => 5,
+      '#description' => t('A bibliography of person\'s works'),
+      '#default_value' => isset($node->works) ? $node->works : ''
+    );
+
+    //var_dump($form);
+
+    return $form;
+  }
+
+  public function getView($node, $teaser = FALSE, $page = FALSE) {
+    $node = node_prepare($node, $teaser); //get ready for display
+    $dates = check_plain($node->dates);
+    $life = check_markup($node->life);
+    $works = check_markup($node->works);
+
+    $node->content['biography_info'] = array(
+      '#value' => theme('biography_info', $dates, $life, $works),
+      '#weight' => 1,
+    );
+
+    return $node;
+  }
+
+  public function insert($node) {
+    if (!isset($node->life)) $node->life = '';
+    if (!isset($node->works)) $node->works = '';
+
+    db_query("insert into {biography} ".
+              "(nid ,vid,dates,life,works)  values (%d, %d, '%s', '%s', '%s')",
+        $node->nid,
+        $node->vid,
+        $node->dates,
+        $node->life,
+        $node->works
+    );
+  }
+
+  public function load($node) {
+    $additions = db_fetch_object(
+        db_query('SELECT dates,life,works  FROM {biography} WHERE vid = %d', $node->vid));
+    return $additions;      
+  }
+
+  public function update($node) {
+    //update existing node content
+    db_queryd(
+        "UPDATE {biography} SET ".
+        " dates = '%s' , ".
+        " life = '%s' , ".
+        " works = '%s' ".
+        " WHERE vid = %d",
+        $node->dates,
+        $node->life,
+        $node->works,
+        $node->vid
+   );    
+  }
+
+} 
+
+
+class PressReleaseNodeTypeController implements NodeTypeController {
+  
+  public function access($op, $node, $account) {
+    switch ($op) {
+      case "create" :
+        return user_access(PERM_CREATE_PR, $account);
+      case "update" :
+        return user_access(PERM_UPDATE_PR, $account);
+      case "delete" :
+        return user_access(PERM_DELETE_PR, $account);
+    }      
+  }
+
+  public function delete(&$node) {
+    db_query("DELETE FROM {pressrelease} WHERE nid = %d", $node->nid);  
+  }
+
+  public function deleteRevision($vid) {
+    db_query("DELETE FROM {pressrelease} WHERE vid = %d", $vid);
+  }
+
+  public function getForm(&$node, $form_state) {
+        //get the type of the node (it necessary, since administrator can override it)
+    $type = node_get_types('type', $node);
+
+    if ($type -> has_title) {
+      $form['title'] = array(
+          '#type' => 'textfield',
+          '#title' => check_plain($type->title_label),
+          '#required' => TRUE,
+          '#default_value' => $node->title,
+          '#weight' => 0
+        );
+    }
+    if ($type->has_body) {
+      $form['body_field'] = node_body_field(
+          $node,
+          $type->body_label,
+          $type->min_word_count
+          );
+    }
+    //custom fields
+    $form['dateline'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Dateline'),
+      '#required' => TRUE,
+      '#size' => 50,
+      '#maxlength' => 127,
+      '#description' => t('Dateline of the press release'),
+      '#default_value' => isset($node->dateline) ? $node->dateline : '',
+      '#weight' => 1
+    );
+    $form['intro'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Introduction'),
+      '#cols' => 50,
+      '#rows' => 5,
+      '#description' => t('Introduction of the press release'),
+      '#default_value' => isset($node->intro) ? $node->intro : '',
+      '#weight' => 2
+    );
+    $form['contact'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Contact'),
+      '#required' => TRUE,
+      '#size' => 50,
+      '#maxlength' => 255,
+      '#description' => t('Media contact information (tel, fax, email)'),
+      '#default_value' => isset($node->contact) ? $node->contact : '',
+      '#weight' => 3
+    );
+
+    $form['body_field']['#weight'] = 3;
+    
+//var_dump($form);
+    
+    return $form;
+
+  }
+
+  public function getView($node, $teaser = FALSE, $page = FALSE) {
+    $node = node_prepare($node, $teaser); //get ready for display
+    $dateline = check_plain($node->dateline);
+    $intro = check_markup($node->intro);
+    $contact = check_plain($node->contact);
+
+    $node->content['pressrelease_info'] = array(
+      '#value' => theme('pressrelease_info', 
+          $node->body, $dateline, $intro, $contact),
+      '#weight' => 1,
+    );
+    
+    //hide default body element and use the override in the template one 
+    $node->content['body'] = array('#value' => '','#weight' => 0,);
+
+    //var_dump($node);
+    return $node;    
+  }
+
+  public function insert($node) {
+    if (!isset($node->intro)) $node->intro = '';
+
+    db_query('insert into {pressrelease} (nid,vid,dateline,intro,contact) '.
+              "values (%d, %d, '%s', '%s', '%s')",
+        $node->nid,
+        $node->vid,
+        $node->dateline,
+        $node->intro,
+        $node->contact
+    );      
+  }
+
+  public function load($node) {
+    $additions = db_fetch_object(
+        db_query(
+            'SELECT dateline,intro,contact'.
+            ' FROM {pressrelease} WHERE vid = %d', $node->vid));
+    return $additions;        
+  }
+
+  public function update($node) {
+    db_query(
+        "UPDATE {pressrelease} SET ".
+        " dateline = '%s' , ".
+        " intro = '%s' , ".
+        " contact = '%s' ".
+        " WHERE vid = %d",
+        $node->dateline,
+        $node->intro,
+        $node->contact,
+        $node->vid
+   );    
+  }
+
+}
+
+
+abstract class NodeTypeControllerFactory {
+  
+  private static $biographyNodeTypeController;
+  private static $pressReleaseNodeTypeController;
+  
+  
+  public static function getNodeTypeController($node) {
+    self::initializeControllers();
+    
+   if ('biography' === $node || 'biography' === $node -> type)
+    return self::$biographyNodeTypeController;
+  
+   if ('pressrelease' === $node || 'pressrelease' === $node -> type)
+    return self::$pressReleaseNodeTypeController;
+  }
+    
+  private static function initializeControllers() {
+    if (!isset(self::$biographyNodeTypeController))
+      self::$biographyNodeTypeController = new BiographyNodeTypeController();
+    
+    if (!isset(self::$pressReleaseNodeTypeController))
+      self::$pressReleaseNodeTypeController = new PressReleaseNodeTypeController();
+  }
+
+}

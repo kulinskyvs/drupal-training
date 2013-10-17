@@ -1,0 +1,7 @@
+name = "Biography module"
+description = "Adds support of two new content types: biography and press release"
+core = 6.x
+package = Other
+php = 5.3
+
+version = 1.0
