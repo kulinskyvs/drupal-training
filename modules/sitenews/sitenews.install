@@ -1,0 +1,73 @@
+<?php
+
+/**
+ * Implementation of hook_install().
+ */
+function sitenews_install() {
+  // Check to see if format already exists.
+  $filter_format = get_filter_format_by_name();
+  
+  // Create format
+  if (!$filter_format) {
+    _create_filter_format();
+    $filter_format = get_filter_format_by_name();
+    
+    
+    //register filter formats
+    _add_filter_to_format($filter_format->format, NEWSBRIEF_TAGLESS_FILTER_DELTA, 0);
+    _add_filter_to_format($filter_format->format, NEWSBRIEF_PLACEHOLDER_FILTER_DELTA, 10);
+    _add_filter_to_format($filter_format->format, NEWSBRIEF_UPPER_FILTER_DELTA, 20);
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function sitenews_uninstall() {
+  $filter_format = get_filter_format_by_name();
+  if ($filter_format) {
+    
+    //remove filters
+    _remove_filter_to_format($filter_format->format, NEWSBRIEF_TAGLESS_FILTER_DELTA);
+    _remove_filter_to_format($filter_format->format, NEWSBRIEF_PLACEHOLDER_FILTER_DELTA);
+    _remove_filter_to_format($filter_format->format, NEWSBRIEF_UPPER_FILTER_DELTA);
+    
+    //remove format itself
+    _delete_filter_format();
+  }
+}
+
+
+/**
+ * Returns filter_format object by the given name
+ * @param type $name
+ * @return type 
+ */
+function get_filter_format_by_name($name = NEWSBRIEF_DEFAULT_FORMAT) {
+  $res = db_query( "SELECT * FROM {filter_formats} WHERE name = '%s'", $name);
+  return db_fetch_object($res);
+}
+
+
+function _create_filter_format($name = NEWSBRIEF_DEFAULT_FORMAT) {
+ db_query( "INSERT INTO {filter_formats} (name) VALUES ('%s')", $name); 
+}
+
+function _delete_filter_format($name = NEWSBRIEF_DEFAULT_FORMAT) {
+ db_query( "DELETE FROM {filter_formats} where name='%s'", $name); 
+}
+
+
+function _add_filter_to_format($filter_format_id, $delta, $weight) {
+ $q = "INSERT INTO {filters} (format, module, delta, weight) ".
+       "VALUES(%d, 'sitenews', %d, %d)";
+  
+  db_query($q, $filter_format_id, $delta, $weight); 
+}
+
+function _remove_filter_to_format($filter_format_id, $delta) {
+ $q = "DELETE FROM {filters} WHERE format = %d and delta=%d";
+  
+  db_query($q, $filter_format_id, $delta); 
+}
+

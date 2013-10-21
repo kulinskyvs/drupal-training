@@ -1,0 +1,8 @@
+name = "Site news"
+description = "Send a email with site news for all registered users"
+core = 6.x
+package = Other
+php = 5.3
+
+dependencies[] = "trigger"
+version = 1.0

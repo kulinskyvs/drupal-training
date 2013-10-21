@@ -406,7 +406,7 @@ class PressReleaseNodeTypeController implements NodeTypeController {
   }
 
   public function getForm(&$node, $form_state) {
-        //get the type of the node (it necessary, since administrator can override it)
+    //get the type of the node (it necessary, since administrator can override it)
     $type = node_get_types('type', $node);
 
     if ($type -> has_title) {

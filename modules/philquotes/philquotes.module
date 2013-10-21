@@ -57,6 +57,23 @@ function philquotes_menu() {
   return $items;
 }
 
+/**
+ * Implementation of hook_sitenews
+ * @return type 
+ */
+function philquotes_sitenews() {
+  $quote = _philqoutes_get_quote();
+  $quote_message = $quote->body ."\n-- ". $quote->title; 
+
+  $content['philquotes'] = array(
+    '#weight' => 10,
+    '#title' => t('The quote of the day'),
+    '#body' => strip_tags($quote_message)
+  );
+  
+  return $content;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /**

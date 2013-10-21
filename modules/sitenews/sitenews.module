@@ -1,0 +1,333 @@
+<?php
+
+/**
+ * The sitenews module.
+ * The modules add new content type - briefnews.
+ * It also add an action that will automatically send email to
+ * all the registeres users about site news.
+ * 
+ * It also defines new hook (hook_sitenews) and defines new input format 
+ * (News brief format).
+ */
+
+Define('NEWSBRIEF_DEFAULT_FORMAT', 'Tagless upper case text');
+define('NEWSBRIEF_PLACEHOLDER_FILTER_DELTA', 0);
+define('NEWSBRIEF_TAGLESS_FILTER_DELTA', 1);
+define('NEWSBRIEF_UPPER_FILTER_DELTA', 2);
+
+
+//load filter source file
+include_once drupal_get_path('module', 'sitenews').'/sitenews_filter.inc';
+include_once drupal_get_path('module', 'sitenews').'/sitenews.install';
+
+
+/**
+* Use this hook to build content for a sitenews message.
+*
+* This should return an array of items:
+* <code>array('item_name' => $item)</code>
+* An item is an associative array with the following
+* fields set:
+*
+* - #weight: An integer from -10 to 10
+* - #content: Text content
+* - #title: A title for the text content
+*
+* Weight and content are required. If #title
+* is set, then it will be added as a title.
+*
+* @return
+* A content array.
+*/
+function hook_sitenews() {
+  $content['report'] = array(
+    '#weight' => 0,
+    '#title' => t('Sample Title'),
+    '#body' => t('Sample content')
+  );
+  $content['another report'] = array(
+    '#weight' => 0,
+    '#title' => t('Another Sample Title'),
+    '#body' => t('More sample content')
+  );
+  return $content;
+}
+
+
+/**
+ * Implementation of hook_help().
+ *
+ * @param $path A Drupal menu router path the help is being requested.
+ * @param $arg An array that corresponds to the return of the arg() function.
+ * @return A localized string containing the help text.
+ */
+function sitenews_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case "admin/help#sitenews":
+      $txt = 'Keep users up-to-date by sending them a status '
+      .'report about the latest site happenings. To use this '
+      .'module, you will need to assign a trigger to the '
+      .'"Send site news as email to all users" action. It '
+      .'is recommended that the node publish event be tied to this'
+      .'action, as that will result in the site news being sent'
+      .'whenever a new "news brief" node is published.';
+      $output = '<p>'. t($txt, array()) .'</p>';
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_node_info().
+ *
+ * @return An array of information on the sitenews's node types.
+ */
+function sitenews_node_info() {
+  return array(
+    'newsbrief' => array(
+      'name' => t('News Brief'),
+      'module' => 'sitenews',
+      'description' => t("A brief news content type"),
+      'has_title' => TRUE,
+      'title_label' => t('Title'),
+      'has_body' => TRUE,
+      'body_label' => t('News Brief')
+    )
+  );
+} 
+
+/**
+ * Implementation of hook_form().
+ *
+ * @param &$node The node being added or edited.
+ * @param $form_state The form state array.
+ * @return An array containing the form elements to be displayed in the node edit form.
+ */
+function sitenews_form(&$node, $form_state) {
+    //get the type of the node (it necessary, since administrator can override it)
+    $type = node_get_types('type', $node);
+
+    if ($type -> has_title) {
+      $form['title'] = array(
+          '#type' => 'textfield',
+          '#title' => check_plain($type->title_label),
+          '#required' => TRUE,
+          '#default_value' => $node->title,
+          '#weight' => 0
+        );
+    }
+    if ($type->has_body) {
+      $form['body_field'] = node_body_field(
+          $node,
+          $type->body_label,
+          $type->min_word_count
+          );
+    }
+    return $form;
+}
+
+/**
+ * Implementation of hook_filter().
+ */
+function sitenews_filter($op, $delta = 0, $format = -1, $text = '', $cache_id = 0) {
+  
+  switch ($op) {
+    case 'list':
+      return array(
+        NEWSBRIEF_PLACEHOLDER_FILTER_DELTA => 
+          FilterFactory::getFilterByDelta(NEWSBRIEF_PLACEHOLDER_FILTER_DELTA) -> getName(),
+        NEWSBRIEF_TAGLESS_FILTER_DELTA => 
+          FilterFactory::getFilterByDelta(NEWSBRIEF_TAGLESS_FILTER_DELTA) -> getName(),
+        NEWSBRIEF_UPPER_FILTER_DELTA => 
+          FilterFactory::getFilterByDelta(NEWSBRIEF_UPPER_FILTER_DELTA) -> getName()
+      );
+
+    case 'description':
+      return FilterFactory::getFilterByDelta($delta) -> getDescription();
+
+    case 'prepare':
+      return FilterFactory::getFilterByDelta($delta) -> prepare($text);
+
+    case "process":
+      return FilterFactory::getFilterByDelta($delta) -> process($text);
+      
+    case "settings":  
+      return FilterFactory::getFilterByDelta($delta) -> settings();
+  }
+}
+
+
+/**
+ * Implementation of hook_filter_tips().
+ *
+ * @param $delta Which of this module's filters to use. Modules which only implement one filter can ignore this parameter.
+ * @param $format Which format we are providing tips for.
+ * @param $long If set to true, long tips are requested, otherwise short tips are needed.
+ * @return string
+ */
+function sitenews_filter_tips($delta, $format, $long = FALSE) {
+  return FilterFactory::getFilterByDelta($delta) -> getTip($delta);
+}
+
+
+/**
+ * Implementation of hook_action_info().
+ */
+function sitenews_action_info() {
+  return array(
+    'sitenews_send_action' => array(
+      'description' => t('Send site news as email to all site users'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'hooks' => array(
+          'nodeapi' => array('insert', 'update', 'presave'),
+          )
+    )
+  );
+}
+
+
+/**
+* Implements hook_theme().
+*/
+function sitenews_theme() {
+  return array(
+    'sitenews_msgblock' => array(
+      'arguments' => array('block' => NULL),
+    ),
+    'sitenews_newsbrief' => array(
+      'arguments' => array('node' => NULL),
+    ),
+  );
+}  
+
+
+/**
+* Implementation of hook_mail().
+*/
+function sitenews_mail($key, &$message, $params) {
+  switch ($key) {
+    case 'sendsitenews':
+      $message['to'] = $params['to'];
+      $message['subject'] = $params['subject'];
+      $message['body'] = $params['body'];
+  }
+}
+
+/**
+ * Implementation of send email action
+ * 
+ * @param $object node
+ * @param $context 
+ */
+function sitenews_send_action(&$object, $context) {
+
+ // If not a published sitenews, skip.
+  if (!$object->status || $object->type != 'newsbrief')
+    return;
+
+  // Get addresses to be used during email
+  $q = "SELECT mail, status FROM {users}  WHERE status != 0 AND uid > 0";
+  $results = db_query($q);
+  $addresses = array();
+  while ($obj = db_fetch_object($results)) {
+    $addresses[] = $obj->mail;
+  }
+  if (count($addresses) == 0) {
+    watchdog(
+        'sitenews', 'No user email addresses were found', array(), WATCHDOG_ERROR
+    );
+    return;
+  }
+  
+// Execute hook_sitenews() for all the registered modules
+  $content = module_invoke_all('sitenews');
+  
+// Build params
+  $params = array(
+    'node' => $object,
+    'to' => implode(', ', $addresses),
+    'subject' => $object->title,
+    'context' => $context,
+    'additional content' => $content,
+  );
+  
+  $message = _sitenews_do_message($object, $params);
+  watchdog(
+      'actions', 'Site News "Send" action fired. Sending to !mail', array('!mail' => $params['to'])
+  );
+}
+
+
+/**
+* Internal function to prepare a message and pass it on
+* to the mailer.
+*
+* @param $node
+* The news brief node.
+* @param $params
+* An array of params.
+*/
+function _sitenews_do_message(&$node, $params) {
+  $node = $params['node'];
+  $content = $params['additional content'];
+  
+// Theme the main node:
+  $params['body'] = theme('sitenews_newsbrief', $node);
+// See common.inc (particularly element_sort() and
+// drupal_render())
+  uasort($content, 'element_sort');
+  
+// Render each block of content:
+  foreach ($content as $item) {
+    $params['body'] .= theme('sitenews_msgblock', $item);
+  }
+  
+// Send the mail:
+  drupal_mail(
+      'sitenews', 'sendsitenews', 
+      $params['to'], 
+      language_default(), 
+      $params, 
+      variable_get('site_mail', NULL), 
+      TRUE
+  );
+}
+
+
+/**
+ * Theme to display a news brief in a
+ * sitenews message block.
+ *
+ * @param $node
+ * The news brief node object.
+ */
+function theme_sitenews_newsbrief($node) {
+  $format = get_filter_format_by_name(NEWSBRIEF_DEFAULT_FORMAT);
+  $format_id = $format->format;
+  
+  $text = strtoupper(check_markup($node->title, $format_id)) . "\n\n";
+  $text .= check_markup($node->body, $format_id) . "\n\n";
+  return $text;
+  
+}
+
+/**
+ * Theme for email messages.
+ * @param $block
+ * A block with #title and #body set.
+ */
+function theme_sitenews_msgblock($block) {
+  $msg = array();
+  if (!empty($block['#title'])) {
+    $title = strtoupper($block['#title']);
+    for ($i = 0; $i < strlen($title); ++$i) {
+      $underline .= '=';
+    }
+    $msg[] = $title;
+    $msg[] = $underline;
+  }
+  $msg[] = $block['#body'] . "\n"; // <-- extra newline
+  return implode("\n", $msg);
+}
