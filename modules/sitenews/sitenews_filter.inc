@@ -205,15 +205,6 @@ class FilterFactory  {
     }
   }
   
-  
-  /**
-   * Returns filter by its name
-   * @param type $filterName 
-   */
-  public static function getByName($filterName) {
-    //TODO: implement me please
-  }
-  
   private static function initFilter() {
     if (!isset(self::$placeHolderFilter))
       self::$placeHolderFilter = new PlaceHolderFilter ();

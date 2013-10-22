@@ -10,11 +10,20 @@
  */
 
 define('MODULE_NAME', 'bookshelf');
+
+//define variable names to be customixe by current module
+Define('VAR_GOODREADS_SERVICE_URL',     "goodreads_service_url");
+Define('VAR_GOODREADS_BOOKSHELF_URL',   "goosreads_bookshelf_url");
+Define('VAR_GOODREADS_NOCOVER_IMG_URL', "goosreads_nocover_img_url");
+Define('VAR_GOODREADS_ITEMS_NUMBER',    "goodreads_items_number");
+
 //TODO: make this url configurable at module level
-define('BOOKSHELF_DEFAULT_URL', 'https://www.goodreads.com/review/list_rss/398385?shelf=history-of-philosophy');
-define('NOCOVER_IMG' , 'http://www.goodreads.com/images/nocover-60x80.jpg');
-define('NOURL_LINK' , 'http://www.goodreads.com');
-define('DEFAULT_ITEMS_NUMBER', 3);
+define('DEFAULT_GOODREADS_SERVICE_URL' , 'http://www.goodreads.com');
+define('DEFAULT_GOODREADS_BOOKSHELF_URL', 'https://www.goodreads.com/review/list_rss/398385?shelf=history-of-philosophy');
+define('DEFAULT_GOODREADS_NOCOVER_IMG' , 'http://www.goodreads.com/images/nocover-60x80.jpg');
+define('DEFAULT_GOODREADS_ITEMS_NUMBER', 3);
+
+Define('GOODREADS_CONFIG_MENU_URL', 'admin/settings/bookshelf');
 
 /**
  * Implementation of hook_block().
@@ -32,7 +41,7 @@ function bookshelf_block($op = 'list', $delta = 0, $edit = array()) {
 
     case 'view':
       $blocks['subject'] = t('Virtual bookshelf');
-      $blocks['content'] = _fetch_bookshelf(BOOKSHELF_DEFAULT_URL);
+      $blocks['content'] = _fetch_bookshelf(_variable_bookshelf_url(), _variable_items_number());
 
       return $blocks;
   }
@@ -51,7 +60,7 @@ function bookshelf_help($path, $arg) {
     case "admin/help#".MODULE_NAME:
       $text = 'The Bookshelf module uses !goodreads_url to build virtual bookshelf';
       $output = "<p>".
-          t($text, array("!goodreads_url" => l("Goodreads service", NOURL_LINK))).
+          t($text, array("!goodreads_url" => l("Goodreads service", _variable_service_url()))).
           "</p>";
       break;
   }
@@ -70,7 +79,7 @@ function bookshelf_help($path, $arg) {
  * 
  * @return string containing the presentation of the bookshelf
  */
-function _fetch_bookshelf($url, $items_limit = DEFAULT_ITEMS_NUMBER) {
+function _fetch_bookshelf($url, $items_limit) {
   $result = drupal_http_request($url);
 
   if (200 == $result->code) {
@@ -78,7 +87,8 @@ function _fetch_bookshelf($url, $items_limit = DEFAULT_ITEMS_NUMBER) {
 
     try {
       $xmlDoc = _parse_xml_string($result->data);
-      $content = _render_booksheld_block_content($xmlDoc, $items_limit, NOURL_LINK, NOCOVER_IMG);
+      $content = _render_booksheld_block_content($xmlDoc, $items_limit, 
+          _variable_service_url(),  _variable_nocover_img());
     } catch (Exception $e) {
       
       watchdog('goodreads', "Error parsing xml document from goodreads service using the %url:%error", 
@@ -163,3 +173,157 @@ function _parse_xml_string($xmlData) {
   return $xmlDoc;
 }
 
+
+
+function _variable_service_url() {
+  return variable_get(VAR_GOODREADS_SERVICE_URL, DEFAULT_GOODREADS_SERVICE_URL);
+}
+
+function _variable_bookshelf_url() {
+  return variable_get(VAR_GOODREADS_BOOKSHELF_URL, DEFAULT_GOODREADS_BOOKSHELF_URL);
+}
+
+function _variable_nocover_img() {
+  return variable_get(VAR_GOODREADS_NOCOVER_IMG_URL, DEFAULT_GOODREADS_NOCOVER_IMG);
+}
+
+function _variable_items_number() {
+  return variable_get(VAR_GOODREADS_ITEMS_NUMBER, DEFAULT_GOODREADS_ITEMS_NUMBER);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// --------- configuration section ---------------------------------------------
+/**
+ * Implementation of hook_menu().
+ *
+ * @return An array of menu items.
+ */
+function bookshelf_menu() {
+  $items = array();
+
+  $items[GOODREADS_CONFIG_MENU_URL] = array(
+    'title' => 'Goodreads bookshelf',
+    'description' => 'Configuration of goodreads bookshelf support',
+    'page callback' => 'bookshelf_configuration',
+    'page arguments' => array(),
+    'access arguments' => array('administer users'),
+    'type' => MENU_NORMAL_ITEM
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of menu item callback handler 
+ */
+function bookshelf_configuration() {
+  return drupal_get_form('bookshelf_configure_form');
+}
+
+/**
+ * Form constructor for bookshelf configuration module form
+ * @param type $context 
+ */
+function bookshelf_configure_form($context) {
+  return array(
+    VAR_GOODREADS_SERVICE_URL => array(
+          '#type' => 'textfield',
+          '#title' => t('Goodreads service url'),
+          '#size' => 100,
+          '#maxlength' => 255,
+          '#description' => t('Enter full valid url of goodreads service home page (with http://)'),
+          '#default_value' => _variable_service_url()
+      ),    
+    VAR_GOODREADS_BOOKSHELF_URL => array(
+          '#type' => 'textfield',
+          '#title' => t('Goodreads bookshelf url'),
+          '#size' => 100,
+          '#maxlength' => 255,
+          '#description' => t('Enter full valid url of goodreads bookshelf RSS channel'),
+          '#default_value' => _variable_bookshelf_url()
+      ),        
+    VAR_GOODREADS_NOCOVER_IMG_URL => array(
+          '#type' => 'textfield',
+          '#title' => t('Nocover image url'),
+          '#size' => 100,
+          '#maxlength' => 255,
+          '#description' => t('Enter full valid url of an image to be used in case the book cover image does not exist'),
+          '#default_value' => _variable_nocover_img()
+      ),        
+    VAR_GOODREADS_ITEMS_NUMBER => array(
+          '#type' => 'textfield',
+          '#title' => t('Books to display'),
+          '#size' => 10,
+          '#maxlength' => 3,
+          '#description' => t('Enter number of books (>0) to be displayed on bookshelf'),
+          '#default_value' => _variable_items_number()
+      ),        
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => t('Save')
+    ),
+    'reset' => array(
+      '#type' => 'submit',
+      '#value' => t('Reset to default')
+    ),
+  );  
+}
+
+/**
+ * Validation function of bookshelf configuration form
+ * 
+ */
+function bookshelf_configure_form_validate($form, &$form_state) {
+  $operation = $form['#post']['op'];
+  $form_values = $form_state['values'];
+  
+  if (t('Save') === $operation) {
+    //save opeation is executed
+
+    $urlErrorMessage = 'Please enter valid url for !url_name <br>';
+    $errorMessage = '';
+    if (!valid_url($form_values[VAR_GOODREADS_SERVICE_URL]))
+      $errorMessage .= t($urlErrorMessage, array('!url_name' => 'Goodreads service home page'));
+    
+    if (!valid_url($form_values[VAR_GOODREADS_BOOKSHELF_URL]))
+      $errorMessage .= t($urlErrorMessage, array('!url_name' => 'Goodreads bookshelf'));
+    
+    if (!valid_url($form_values[VAR_GOODREADS_NOCOVER_IMG_URL]))
+      $errorMessage .= t($urlErrorMessage, array('!url_name' => 'Nocover image'));
+    
+    $itemsNumber = intval($form_values[VAR_GOODREADS_ITEMS_NUMBER]);
+    if (0 === $itemsNumber || $itemsNumber < 0)
+      $errorMessage .= t('Please enter valid positive number of books to be displayed');
+    
+    if (!empty($errorMessage))  form_set_error('', $errorMessage);
+  }
+}
+
+/**
+ * Validation function of bookshelf configuration form
+ * 
+ */
+function bookshelf_configure_form_submit($form, &$form_state) {
+  $operation = $form['#post']['op'];
+  $form_values = $form_state['values'];
+  
+  if (t('Save') === $operation) {
+    //save opeation is executed
+    variable_set(VAR_GOODREADS_SERVICE_URL,     $form_values[VAR_GOODREADS_SERVICE_URL]);
+    variable_set(VAR_GOODREADS_BOOKSHELF_URL,   $form_values[VAR_GOODREADS_BOOKSHELF_URL]);
+    variable_set(VAR_GOODREADS_NOCOVER_IMG_URL, $form_values[VAR_GOODREADS_NOCOVER_IMG_URL]);
+    variable_set(VAR_GOODREADS_ITEMS_NUMBER,    $form_values[VAR_GOODREADS_ITEMS_NUMBER]);
+    
+    drupal_set_message(t('The settings were saved'));
+  }  
+  
+  if (t('Reset to default') === $operation) {
+    //reset to default values
+    variable_set(VAR_GOODREADS_SERVICE_URL,     DEFAULT_GOODREADS_SERVICE_URL);
+    variable_set(VAR_GOODREADS_BOOKSHELF_URL,   DEFAULT_GOODREADS_BOOKSHELF_URL);
+    variable_set(VAR_GOODREADS_NOCOVER_IMG_URL, DEFAULT_GOODREADS_NOCOVER_IMG);
+    variable_set(VAR_GOODREADS_ITEMS_NUMBER,    DEFAULT_GOODREADS_ITEMS_NUMBER);
+    
+    drupal_set_message(t('The settings were reset to default values'));    
+  }
+}
